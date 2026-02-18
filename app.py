@@ -1,19 +1,27 @@
 """
-Flask Web Application for Document Summarization - Phase 5
-Multi-document support and percentage-based summary length.
+Flask Web Application for Document Summarization - Phase 6
+BERT TextRank, T5 Abstractive, and ROUGE Evaluation
 """
 
 import os
 from flask import Flask, render_template, request, flash, redirect, url_for
 from werkzeug.utils import secure_filename
 from preprocess import TextPreprocessor
-from model import ExtractiveSummarizer
-from document_parser import DocumentParser
+from model import ExtractiveSummarizer, TextSummarizer
+from document_parser import parse_document
 from keywords import KeywordExtractor
 from textrank import TextRankSummarizer
 from ner import NERExtractor
 from multilingual import MultilingualProcessor
 from multi_document import MultiDocSummarizer
+
+# Phase 6: ML evaluation
+try:
+    from evaluation import SummaryEvaluator
+    EVALUATION_AVAILABLE = True
+except ImportError:
+    EVALUATION_AVAILABLE = False
+    print("Warning: evaluation.py not found. ROUGE scores will not be available.")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -31,7 +39,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 preprocessor = TextPreprocessor()
 summarizer = ExtractiveSummarizer()
 textrank_summarizer = TextRankSummarizer()
-parser = DocumentParser()
+text_summarizer = TextSummarizer()  # Phase 6: New unified summarizer
 keyword_extractor = KeywordExtractor()
 ner_extractor = NERExtractor()
 multilingual = MultilingualProcessor()
@@ -82,6 +90,8 @@ def summarize():
             filepaths.append(filepath)
             
             # Parse document
+            from document_parser import DocumentParser
+            parser = DocumentParser()
             parsed_doc = parser.parse(filepath)
             documents.append({
                 'text': parsed_doc['text'],
@@ -131,8 +141,28 @@ def summarize():
         
         num_keywords = max(5, min(num_keywords, 20))
         
-        # Generate summary based on method
-        if summary_method == 'textrank':
+        # Phase 6: Generate summary using unified TextSummarizer
+        if summary_method in ['bert_textrank', 'abstractive']:
+            # Use new ML methods
+            summary = text_summarizer.summarize(text, method=summary_method, num_sentences=num_sentences)
+            
+            # Build summary_data structure for compatibility
+            import nltk
+            sentences = nltk.sent_tokenize(text)
+            summary_sentences = nltk.sent_tokenize(summary)
+            
+            summary_data = {
+                'summary': summary,
+                'summary_sentences': summary_sentences,
+                'num_sentences': len(summary_sentences),
+                'original_sentences': len(sentences),
+                'compression_ratio': len(summary) / len(text) if len(text) > 0 else 0,
+                'method': summary_method,
+                'word_count_original': len(text.split()),
+                'original_text_length': len(text),
+                'summary_length': len(summary)
+            }
+        elif summary_method == 'textrank':
             summary_data = textrank_summarizer.summarize(text, num_sentences)
             summary_data['num_sentences'] = num_sentences
             summary_data['original_sentences'] = summary_data.get('original_sentences', len(text.split('.')))
@@ -140,12 +170,58 @@ def summarize():
             summary_data['original_text_length'] = len(text)
             summary_data['summary_length'] = len(summary_data['summary'])
         else:
+            # Use original extractive methods
             summary_data = summarizer.summarize_text(
                 text=text,
                 num_sentences=num_sentences,
                 method=summary_method,
                 preprocessor=preprocessor
             )
+        
+        # Phase 6: Calculate ROUGE scores if evaluation available
+        rouge_scores = None
+        quality_assessment = None
+        
+        if EVALUATION_AVAILABLE:
+            try:
+                evaluator = SummaryEvaluator()
+                eval_result = evaluator.evaluate_summary_quality(text, summary_data['summary'])
+                rouge_scores = eval_result['scores']
+                quality_assessment = {
+                    'level': eval_result['quality_level'],
+                    'color': eval_result['quality_color'],
+                    'avg_f1': eval_result['average_f1']
+                }
+            except Exception as e:
+                print(f"ROUGE evaluation error: {e}")
+        
+        # Phase 6: If abstractive, also generate extractive baseline for comparison
+        extractive_summary = None
+        comparison_scores = None
+        
+        if summary_method == 'abstractive' and EVALUATION_AVAILABLE:
+            try:
+                # Generate extractive baseline using TextRank
+                extractive_summary = text_summarizer.summarize(
+                    text, 
+                    method='textrank', 
+                    num_sentences=num_sentences
+                )
+                
+                # Compare both summaries
+                comparison = evaluator.compare_summaries(
+                    text,
+                    extractive_summary,
+                    summary_data['summary']
+                )
+                
+                comparison_scores = {
+                    'extractive': comparison['summary1_evaluation'],
+                    'abstractive': comparison['summary2_evaluation'],
+                    'winner': comparison['winner']
+                }
+            except Exception as e:
+                print(f"Comparison error: {e}")
         
         # Extract keywords if requested
         keywords_data = None
@@ -189,7 +265,12 @@ def summarize():
             doc_stats=doc_stats,
             documents=documents if is_multi_doc else None,
             length_mode=length_mode,
-            summary_percentage=summary_percentage if length_mode == 'percentage' else None
+            summary_percentage=summary_percentage if length_mode == 'percentage' else None,
+            # Phase 6 new variables:
+            rouge_scores=rouge_scores,
+            quality_assessment=quality_assessment,
+            extractive_summary=extractive_summary,
+            comparison_scores=comparison_scores
         )
     
     except ValueError as e:
