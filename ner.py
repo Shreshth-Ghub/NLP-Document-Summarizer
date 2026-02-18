@@ -2,13 +2,17 @@
 Named Entity Recognition Module using spaCy
 Extracts people, organizations, locations, and other entities.
 """
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["SPACY_FORCE_CPU"] = "true"
 
 import spacy
+
 
 class NERExtractor:
     """Extract named entities from text using spaCy."""
     
-    def __init__(self, model='en_core_web_sm'):
+    def __init__(self, model: str = "en_core_web_sm"):
         """
         Initialize NER extractor.
         
@@ -17,84 +21,71 @@ class NERExtractor:
         """
         try:
             self.nlp = spacy.load(model)
-        except:
+        except Exception:
             # If model not found, download it
             import os
-            os.system(f'python -m spacy download {model}')
+            os.system(f"python -m spacy download {model}")
             self.nlp = spacy.load(model)
     
-    def extract_entities(self, text):
+    def extract_entities(self, text: str):
         """
         Extract named entities from text.
         
-        Args:
-            text (str): Input text
-            
         Returns:
-            dict: Entities grouped by type
+            dict with:
+              - total_entities: int
+              - by_type: dict[label] = list[str]
         """
         doc = self.nlp(text)
         
-        # Group entities by type
-        entities = {
-            'PERSON': [],
-            'ORG': [],
-            'GPE': [],  # Geo-Political Entity (countries, cities)
-            'DATE': [],
-            'MONEY': [],
-            'PRODUCT': [],
-            'EVENT': [],
-            'OTHER': []
+        by_type = {
+            "PERSON": [],
+            "ORG": [],
+            "GPE": [],
+            "DATE": [],
+            "MONEY": [],
+            "PRODUCT": [],
+            "EVENT": [],
+            "OTHER": [],
         }
         
         for ent in doc.ents:
-            entity_info = {
-                'text': ent.text,
-                'label': ent.label_
-            }
-            
-            if ent.label_ in entities:
-                entities[ent.label_].append(entity_info)
+            label = ent.label_
+            value = ent.text.strip()
+            if not value:
+                continue
+            if label in by_type:
+                by_type[label].append(value)
             else:
-                entities['OTHER'].append(entity_info)
+                by_type["OTHER"].append(value)
         
-        # Remove duplicates
-        for entity_type in entities:
+        # Remove duplicates and normalize to sorted unique strings
+        for label, values in by_type.items():
             seen = set()
-            unique_entities = []
-            for ent in entities[entity_type]:
-                if ent['text'].lower() not in seen:
-                    seen.add(ent['text'].lower())
-                    unique_entities.append(ent)
-            entities[entity_type] = unique_entities
+            unique = []
+            for v in values:
+                key = v.lower()
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(v)
+            by_type[label] = unique
         
-        # Count total entities
-        total_count = sum(len(entities[key]) for key in entities)
+        total = sum(len(v) for v in by_type.values())
         
         return {
-            'entities': entities,
-            'total_count': total_count,
-            'entity_types': [key for key in entities if len(entities[key]) > 0]
+            "total_entities": total,
+            "by_type": {k: v for k, v in by_type.items() if v},  # drop empty types
         }
     
-    def get_entity_summary(self, text):
+    def get_entity_summary(self, text: str):
         """
-        Get a summary of entities with counts.
-        
-        Args:
-            text (str): Input text
-            
-        Returns:
-            dict: Entity counts by type
+        Get a summary of entities with counts and top examples.
         """
         result = self.extract_entities(text)
-        
         summary = {}
-        for entity_type, entity_list in result['entities'].items():
-            if len(entity_list) > 0:
-                summary[entity_type] = {
-                    'count': len(entity_list),
-                    'examples': [e['text'] for e in entity_list[:5]]  # Top 5 examples
-                }
-        
+        for label, values in result["by_type"].items():
+            summary[label] = {
+                "count": len(values),
+                "examples": values[:5],
+            }
         return summary

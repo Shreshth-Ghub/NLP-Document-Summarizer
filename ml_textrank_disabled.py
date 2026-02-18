@@ -8,7 +8,7 @@ for improved extractive summarization.
 
 import numpy as np
 import networkx as nx
-from bert_similarity import BERTSimilarity
+from bert_similarity_disabled import BERTSimilarity
 
 class MLTextRank:
     """TextRank with BERT embeddings for semantic similarity"""

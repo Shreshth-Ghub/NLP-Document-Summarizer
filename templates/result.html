@@ -495,25 +495,31 @@
         </div>
         
         {% if rouge_scores %}
+            {% set r1 = rouge_scores.get('rouge-1', rouge_scores.get('rouge1', {})) %}
+            {% set r2 = rouge_scores.get('rouge-2', rouge_scores.get('rouge2', {})) %}
+            {% set rl = rouge_scores.get('rouge-l', rouge_scores.get('rougel', {})) %}
+        
         <div class="rouge-section">
             <div class="section-title">
                 <span>📈 ROUGE Evaluation Scores</span>
+                {% if quality_assessment %}
                 <span style="font-size: 0.7em;">Quality: {{ quality_assessment.level|upper }}</span>
+                {% endif %}
             </div>
             <div class="rouge-grid">
                 <div class="rouge-card">
                     <h4>ROUGE-1 (Unigram Overlap)</h4>
                     <div class="rouge-metric">
                         <span>Precision:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-1']['precision']) }}</span>
+                        <span>{{ "%.3f"|format(r1.get('precision', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric">
                         <span>Recall:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-1']['recall']) }}</span>
+                        <span>{{ "%.3f"|format(r1.get('recall', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric rouge-f1">
                         <span>F1-Score:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-1']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(r1.get('f1', 0.0)) }}</span>
                     </div>
                 </div>
                 
@@ -521,15 +527,15 @@
                     <h4>ROUGE-2 (Bigram Overlap)</h4>
                     <div class="rouge-metric">
                         <span>Precision:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-2']['precision']) }}</span>
+                        <span>{{ "%.3f"|format(r2.get('precision', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric">
                         <span>Recall:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-2']['recall']) }}</span>
+                        <span>{{ "%.3f"|format(r2.get('recall', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric rouge-f1">
                         <span>F1-Score:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-2']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(r2.get('f1', 0.0)) }}</span>
                     </div>
                 </div>
                 
@@ -537,15 +543,15 @@
                     <h4>ROUGE-L (Longest Sequence)</h4>
                     <div class="rouge-metric">
                         <span>Precision:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-l']['precision']) }}</span>
+                        <span>{{ "%.3f"|format(rl.get('precision', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric">
                         <span>Recall:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-l']['recall']) }}</span>
+                        <span>{{ "%.3f"|format(rl.get('recall', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric rouge-f1">
                         <span>F1-Score:</span>
-                        <span>{{ "%.3f"|format(rouge_scores['rouge-l']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(rl.get('f1', 0.0)) }}</span>
                     </div>
                 </div>
             </div>
@@ -569,19 +575,19 @@
                     </div>
                     <div class="rouge-metric">
                         <span>ROUGE-1 F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.extractive['rouge-1']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.extractive.get('rouge-1', {}).get('f1', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric">
                         <span>ROUGE-2 F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.extractive['rouge-2']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.extractive.get('rouge-2', {}).get('f1', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric">
                         <span>ROUGE-L F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.extractive['rouge-l']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.extractive.get('rouge-l', {}).get('f1', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric rouge-f1">
                         <span>Average F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.extractive.average_f1) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.extractive.get('average_f1', 0.0)) }}</span>
                     </div>
                 </div>
                 
@@ -595,19 +601,19 @@
                     </div>
                     <div class="rouge-metric">
                         <span>ROUGE-1 F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.abstractive['rouge-1']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.abstractive.get('rouge-1', {}).get('f1', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric">
                         <span>ROUGE-2 F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.abstractive['rouge-2']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.abstractive.get('rouge-2', {}).get('f1', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric">
                         <span>ROUGE-L F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.abstractive['rouge-l']['f1']) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.abstractive.get('rouge-l', {}).get('f1', 0.0)) }}</span>
                     </div>
                     <div class="rouge-metric rouge-f1">
                         <span>Average F1:</span>
-                        <span>{{ "%.3f"|format(comparison_scores.abstractive.average_f1) }}</span>
+                        <span>{{ "%.3f"|format(comparison_scores.abstractive.get('average_f1', 0.0)) }}</span>
                     </div>
                 </div>
             </div>

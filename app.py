@@ -6,12 +6,13 @@ BERT TextRank, T5 Abstractive, and ROUGE Evaluation
 import os
 from flask import Flask, render_template, request, flash, redirect, url_for
 from werkzeug.utils import secure_filename
+
 from preprocess import TextPreprocessor
 from model import ExtractiveSummarizer, TextSummarizer
-from document_parser import parse_document
+from document_parser import DocumentParser
 from keywords import KeywordExtractor
 from textrank import TextRankSummarizer
-from ner import NERExtractor
+from ner import NERExtractor            # NER ENABLED
 from multilingual import MultilingualProcessor
 from multi_document import MultiDocSummarizer
 
@@ -39,21 +40,24 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 preprocessor = TextPreprocessor()
 summarizer = ExtractiveSummarizer()
 textrank_summarizer = TextRankSummarizer()
-text_summarizer = TextSummarizer()  # Phase 6: New unified summarizer
+text_summarizer = TextSummarizer()      # Phase 6: unified summarizer
 keyword_extractor = KeywordExtractor()
-ner_extractor = NERExtractor()
+ner_extractor = NERExtractor()          # NER ENABLED
 multilingual = MultilingualProcessor()
 multi_doc_summarizer = MultiDocSummarizer()
+
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 @app.route('/')
 def index():
     """Render home page with upload form."""
     languages = multilingual.get_supported_languages()
     return render_template('index.html', languages=languages)
+
 
 @app.route('/summarize', methods=['POST'])
 def summarize():
@@ -90,7 +94,6 @@ def summarize():
             filepaths.append(filepath)
             
             # Parse document
-            from document_parser import DocumentParser
             parser = DocumentParser()
             parsed_doc = parser.parse(filepath)
             documents.append({
@@ -111,7 +114,7 @@ def summarize():
         num_keywords = int(request.form.get('num_keywords', 10))
         keyword_method = request.form.get('keyword_method', 'tfidf')
         
-        # NER params
+        # NER params (now active)
         extract_entities = request.form.get('extract_entities', 'no') == 'yes'
         
         # Multi-document processing
@@ -133,7 +136,7 @@ def summarize():
         # Calculate summary length based on mode
         if length_mode == 'percentage':
             num_sentences = multi_doc_summarizer.calculate_summary_length(
-                text, 
+                text,
                 percentage=summary_percentage
             )
         else:
@@ -143,8 +146,10 @@ def summarize():
         
         # Phase 6: Generate summary using unified TextSummarizer
         if summary_method in ['bert_textrank', 'abstractive']:
-            # Use new ML methods
-            summary = text_summarizer.summarize(text, method=summary_method, num_sentences=num_sentences)
+            # Use new ML methods (may fall back to TextRank in model.py)
+            summary = text_summarizer.summarize(
+                text, method=summary_method, num_sentences=num_sentences
+            )
             
             # Build summary_data structure for compatibility
             import nltk
@@ -156,7 +161,7 @@ def summarize():
                 'summary_sentences': summary_sentences,
                 'num_sentences': len(summary_sentences),
                 'original_sentences': len(sentences),
-                'compression_ratio': len(summary) / len(text) if len(text) > 0 else 0,
+                'compression_ratio': len(summary_sentences) / len(sentences) if len(sentences) > 0 else 0,
                 'method': summary_method,
                 'word_count_original': len(text.split()),
                 'original_text_length': len(text),
@@ -165,7 +170,9 @@ def summarize():
         elif summary_method == 'textrank':
             summary_data = textrank_summarizer.summarize(text, num_sentences)
             summary_data['num_sentences'] = num_sentences
-            summary_data['original_sentences'] = summary_data.get('original_sentences', len(text.split('.')))
+            summary_data['original_sentences'] = summary_data.get(
+                'original_sentences', len(text.split('.'))
+            )
             summary_data['word_count_original'] = len(text.split())
             summary_data['original_text_length'] = len(text)
             summary_data['summary_length'] = len(summary_data['summary'])
@@ -185,7 +192,9 @@ def summarize():
         if EVALUATION_AVAILABLE:
             try:
                 evaluator = SummaryEvaluator()
-                eval_result = evaluator.evaluate_summary_quality(text, summary_data['summary'])
+                eval_result = evaluator.evaluate_summary_quality(
+                    text, summary_data['summary']
+                )
                 rouge_scores = eval_result['scores']
                 quality_assessment = {
                     'level': eval_result['quality_level'],
@@ -201,14 +210,13 @@ def summarize():
         
         if summary_method == 'abstractive' and EVALUATION_AVAILABLE:
             try:
-                # Generate extractive baseline using TextRank
                 extractive_summary = text_summarizer.summarize(
-                    text, 
-                    method='textrank', 
+                    text,
+                    method='textrank',
                     num_sentences=num_sentences
                 )
                 
-                # Compare both summaries
+                evaluator = SummaryEvaluator()
                 comparison = evaluator.compare_summaries(
                     text,
                     extractive_summary,
@@ -233,7 +241,7 @@ def summarize():
                 top_n=num_keywords
             )
         
-        # Extract entities if requested
+        # Extract entities if requested (NER enabled)
         entities_data = None
         if extract_entities:
             entities_data = ner_extractor.extract_entities(text)
@@ -287,10 +295,12 @@ def summarize():
                 os.remove(filepath)
         return redirect(url_for('index'))
 
+
 @app.route('/about')
 def about():
     """Render about page with project information."""
     return render_template('about.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

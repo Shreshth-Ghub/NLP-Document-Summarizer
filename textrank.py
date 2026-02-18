@@ -9,6 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 import re
 
+
 class TextRankSummarizer:
     """TextRank algorithm for extractive summarization."""
     
@@ -53,7 +54,7 @@ class TextRankSummarizer:
             similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
             
             return similarity_matrix
-        except:
+        except Exception:
             # Fallback if TF-IDF fails
             return np.zeros((len(sentences), len(sentences)))
     
@@ -84,7 +85,7 @@ class TextRankSummarizer:
         # Iterate until convergence
         for _ in range(self.max_iterations):
             new_scores = (1 - self.damping_factor) / n + \
-                        self.damping_factor * transition_matrix.T.dot(scores)
+                         self.damping_factor * transition_matrix.T.dot(scores)
             
             # Check convergence
             if np.linalg.norm(new_scores - scores) < self.threshold:
@@ -96,24 +97,25 @@ class TextRankSummarizer:
     
     def summarize(self, text, num_sentences=5):
         """
-        Summarize text using TextRank algorithm.
+        Generate summary using TextRank.
         
         Args:
             text (str): Input text
             num_sentences (int): Number of sentences in summary
             
         Returns:
-            dict: Summary data including sentences and scores
+            dict: Summary data
         """
-        # Split into sentences
         sentences = self._split_sentences(text)
         
-        if len(sentences) == 0:
+        if not sentences:
             return {
                 'summary': '',
                 'summary_sentences': [],
                 'scores': [],
-                'method': 'textrank'
+                'method': 'textrank',
+                'original_sentences': 0,
+                'compression_ratio': 0.0
             }
         
         # Limit number of sentences to available
@@ -124,7 +126,9 @@ class TextRankSummarizer:
                 'summary': sentences[0],
                 'summary_sentences': [sentences[0]],
                 'scores': [1.0],
-                'method': 'textrank'
+                'method': 'textrank',
+                'original_sentences': 1,
+                'compression_ratio': 1.0
             }
         
         # Build similarity matrix
