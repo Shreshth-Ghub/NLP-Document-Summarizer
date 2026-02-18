@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Summarizer - NLP Project</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+        }
+        
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-label {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            display: inline-block;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .file-label:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .file-name {
+            margin-top: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            grid-column: 1 / -1;
+            color: #667eea;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .option-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .option-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border 0.3s;
+        }
+        
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .checkbox-group {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            grid-column: 1 / -1;
+        }
+        
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .checkbox-wrapper label {
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border-left: 4px solid #c33;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 30px;
+            border-radius: 5px;
+        }
+        
+        .info-box h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            color: #333;
+        }
+        
+        .info-box li {
+            margin-bottom: 5px;
+        }
+        
+        .format-badges {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .format-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .keyword-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Document Summarizer</h1>
+        <p class="subtitle">Upload a document and get an AI-generated summary with keywords</p>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <form action="/summarize" method="POST" enctype="multipart/form-data" id="uploadForm">
+            <div class="upload-section">
+                <div class="upload-icon">📁</div>
+                <label for="file" class="file-label">Choose File</label>
+                <input type="file" id="file" name="file" accept=".txt,.pdf,.docx" required>
+                <div class="file-name" id="fileName">No file selected</div>
+                <div class="format-badges">
+                    <span class="format-badge">TXT</span>
+                    <span class="format-badge">PDF</span>
+                    <span class="format-badge">DOCX</span>
+                </div>
+            </div>
+            
+            <div class="options-grid">
+                <div class="section-title">📝 Summary Settings</div>
+                
+                <div class="option-group">
+                    <label for="num_sentences">Number of Sentences:</label>
+                    <input type="number" id="num_sentences" name="num_sentences" value="5" min="1" max="20" required>
+                </div>
+                
+                <div class="option-group">
+                    <label for="method">Summarization Method:</label>
+                    <select id="method" name="method">
+                        <option value="frequency">Word Frequency</option>
+                        <option value="tfidf" selected>TF-IDF Scoring</option>
+                    </select>
+                </div>
+                
+                <div class="section-title">🔑 Keyword Extraction</div>
+                
+                <div class="checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="extract_keywords" name="extract_keywords" value="yes" checked>
+                        <label for="extract_keywords">Extract keywords from document</label>
+                    </div>
+                    
+                    <div class="keyword-options" id="keywordOptions">
+                        <div class="option-group">
+                            <label for="num_keywords">Number of Keywords:</label>
+                            <input type="number" id="num_keywords" name="num_keywords" value="10" min="5" max="20">
+                        </div>
+                        
+                        <div class="option-group">
+                            <label for="keyword_method">Extraction Method:</label>
+                            <select id="keyword_method" name="keyword_method">
+                                <option value="tfidf" selected>TF-IDF</option>
+                                <option value="frequency">Frequency</option>
+                                <option value="rake">RAKE</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submitBtn">Generate Summary & Keywords</button>
+        </form>
+        
+        <div class="info-box">
+            <h3>ℹ️ How it works:</h3>
+            <ul>
+                <li><strong>Summarization:</strong> Extract key sentences using Word Frequency or TF-IDF</li>
+                <li><strong>Keywords:</strong> Identify important terms using TF-IDF, Frequency, or RAKE algorithm</li>
+                <li>Upload <strong>TXT, PDF, or DOCX</strong> files up to 16 MB</li>
+                <li>Choose 1-20 sentences for summary and 5-20 keywords</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        const fileInput = document.getElementById('file');
+        const fileName = document.getElementById('fileName');
+        const submitBtn = document.getElementById('submitBtn');
+        const extractKeywords = document.getElementById('extract_keywords');
+        const keywordOptions = document.getElementById('keywordOptions');
+        
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const fileExt = file.name.split('.').pop().toUpperCase();
+                fileName.textContent = `${file.name} (${fileExt})`;
+                submitBtn.disabled = false;
+            } else {
+                fileName.textContent = 'No file selected';
+                submitBtn.disabled = true;
+            }
+        });
+        
+        // Toggle keyword options visibility
+        extractKeywords.addEventListener('change', function() {
+            keywordOptions.style.display = this.checked ? 'grid' : 'none';
+        });
+        
+        // Initially disable submit button
+        submitBtn.disabled = true;
+    </script>
+</body>
+</html>
