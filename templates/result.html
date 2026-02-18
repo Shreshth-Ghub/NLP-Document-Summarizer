@@ -396,39 +396,39 @@
         </div>
         {% endif %}
         
-        {% if entities_data %}
+        {% if entities_data and entities_data.get('by_type') %}
         <div class="entities-section">
             <div class="section-title">
                 🏷️ Named Entities ({{ entities_data.total_entities }} found)
             </div>
             <div class="entities-grid">
-                {% if entities_data.by_type.PERSON %}
+                {% if entities_data['by_type'].get('PERSON') %}
                 <div class="entity-card person">
-                    <h4>👤 People ({{ entities_data.by_type.PERSON|length }})</h4>
+                    <h4>👤 People ({{ entities_data['by_type']['PERSON']|length }})</h4>
                     <div class="entity-tags">
-                        {% for entity in entities_data.by_type.PERSON %}
+                        {% for entity in entities_data['by_type']['PERSON'] %}
                         <span class="entity-tag person">{{ entity }}</span>
                         {% endfor %}
                     </div>
                 </div>
                 {% endif %}
                 
-                {% if entities_data.by_type.ORG %}
+                {% if entities_data['by_type'].get('ORG') %}
                 <div class="entity-card org">
-                    <h4>🏢 Organizations ({{ entities_data.by_type.ORG|length }})</h4>
+                    <h4>🏢 Organizations ({{ entities_data['by_type']['ORG']|length }})</h4>
                     <div class="entity-tags">
-                        {% for entity in entities_data.by_type.ORG %}
+                        {% for entity in entities_data['by_type']['ORG'] %}
                         <span class="entity-tag org">{{ entity }}</span>
                         {% endfor %}
                     </div>
                 </div>
                 {% endif %}
                 
-                {% if entities_data.by_type.GPE %}
+                {% if entities_data['by_type'].get('GPE') %}
                 <div class="entity-card location">
-                    <h4>📍 Locations ({{ entities_data.by_type.GPE|length }})</h4>
+                    <h4>📍 Locations ({{ entities_data['by_type']['GPE']|length }})</h4>
                     <div class="entity-tags">
-                        {% for entity in entities_data.by_type.GPE %}
+                        {% for entity in entities_data['by_type']['GPE'] %}
                         <span class="entity-tag location">{{ entity }}</span>
                         {% endfor %}
                     </div>
