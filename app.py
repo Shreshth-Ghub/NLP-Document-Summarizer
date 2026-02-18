@@ -1,3 +1,8 @@
+"""
+Flask Web Application for Document Summarization - Phase 5
+Multi-document support and percentage-based summary length.
+"""
+
 import os
 from flask import Flask, render_template, request, flash, redirect, url_for
 from werkzeug.utils import secure_filename
@@ -5,12 +10,16 @@ from preprocess import TextPreprocessor
 from model import ExtractiveSummarizer
 from document_parser import DocumentParser
 from keywords import KeywordExtractor
+from textrank import TextRankSummarizer
+from ner import NERExtractor
+from multilingual import MultilingualProcessor
+from multi_document import MultiDocSummarizer
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32 MB for multiple files
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx'}
@@ -21,8 +30,12 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Initialize NLP components
 preprocessor = TextPreprocessor()
 summarizer = ExtractiveSummarizer()
+textrank_summarizer = TextRankSummarizer()
 parser = DocumentParser()
 keyword_extractor = KeywordExtractor()
+ner_extractor = NERExtractor()
+multilingual = MultilingualProcessor()
+multi_doc_summarizer = MultiDocSummarizer()
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
@@ -31,69 +44,127 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     """Render home page with upload form."""
-    return render_template('index.html')
+    languages = multilingual.get_supported_languages()
+    return render_template('index.html', languages=languages)
 
 @app.route('/summarize', methods=['POST'])
 def summarize():
     """Handle file upload and generate summary."""
-    # Check if file is present
-    if 'file' not in request.files:
-        flash('No file uploaded', 'error')
+    # Check if files are present
+    if 'files[]' not in request.files:
+        flash('No files uploaded', 'error')
         return redirect(url_for('index'))
     
-    file = request.files['file']
+    files = request.files.getlist('files[]')
     
-    # Check if filename is empty
-    if file.filename == '':
-        flash('No file selected', 'error')
+    # Filter out empty filenames
+    files = [f for f in files if f.filename != '']
+    
+    if not files:
+        flash('No files selected', 'error')
         return redirect(url_for('index'))
     
-    # Check if file is allowed
-    if not allowed_file(file.filename):
-        flash('Only .txt, .pdf, and .docx files are supported', 'error')
-        return redirect(url_for('index'))
+    # Check if all files are allowed
+    for file in files:
+        if not allowed_file(file.filename):
+            flash(f'File {file.filename}: Only .txt, .pdf, and .docx files are supported', 'error')
+            return redirect(url_for('index'))
     
     try:
-        # Save file
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        # Parse all documents
+        documents = []
+        filepaths = []
         
-        # Parse document (works for TXT, PDF, DOCX)
-        parsed_doc = parser.parse(filepath)
-        text = parsed_doc['text']
-        file_format = parsed_doc['format'].upper()
+        for file in files:
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            filepaths.append(filepath)
+            
+            # Parse document
+            parsed_doc = parser.parse(filepath)
+            documents.append({
+                'text': parsed_doc['text'],
+                'filename': filename,
+                'format': parsed_doc['format'].upper()
+            })
         
         # Get parameters from form
+        length_mode = request.form.get('length_mode', 'sentences')
         num_sentences = int(request.form.get('num_sentences', 5))
+        summary_percentage = int(request.form.get('summary_percentage', 25))
         summary_method = request.form.get('method', 'frequency')
+        language = request.form.get('language', 'english')
+        
+        # Keyword extraction params
         extract_keywords = request.form.get('extract_keywords', 'yes') == 'yes'
         num_keywords = int(request.form.get('num_keywords', 10))
         keyword_method = request.form.get('keyword_method', 'tfidf')
         
-        # Validate parameters
-        num_sentences = max(1, min(num_sentences, 20))
+        # NER params
+        extract_entities = request.form.get('extract_entities', 'no') == 'yes'
+        
+        # Multi-document processing
+        is_multi_doc = len(documents) > 1
+        
+        if is_multi_doc:
+            # Combine documents
+            combined = multi_doc_summarizer.combine_documents(documents)
+            text = combined['combined_text']
+            doc_stats = multi_doc_summarizer.get_document_stats(documents)
+        else:
+            text = documents[0]['text']
+            doc_stats = None
+        
+        # Auto-detect language if set to auto
+        if language == 'auto':
+            language = multilingual.detect_language(text)
+        
+        # Calculate summary length based on mode
+        if length_mode == 'percentage':
+            num_sentences = multi_doc_summarizer.calculate_summary_length(
+                text, 
+                percentage=summary_percentage
+            )
+        else:
+            num_sentences = max(1, min(num_sentences, 20))
+        
         num_keywords = max(5, min(num_keywords, 20))
         
-        # Generate summary
-        summary_data = summarizer.summarize_text(
-            text=text,
-            num_sentences=num_sentences,
-            method=summary_method,
-            preprocessor=preprocessor
-        )
+        # Generate summary based on method
+        if summary_method == 'textrank':
+            summary_data = textrank_summarizer.summarize(text, num_sentences)
+            summary_data['num_sentences'] = num_sentences
+            summary_data['original_sentences'] = summary_data.get('original_sentences', len(text.split('.')))
+            summary_data['word_count_original'] = len(text.split())
+            summary_data['original_text_length'] = len(text)
+            summary_data['summary_length'] = len(summary_data['summary'])
+        else:
+            summary_data = summarizer.summarize_text(
+                text=text,
+                num_sentences=num_sentences,
+                method=summary_method,
+                preprocessor=preprocessor
+            )
         
         # Extract keywords if requested
         keywords_data = None
         if extract_keywords:
+            keyword_extractor.stop_words = multilingual.get_stopwords(language)
             keywords_data = keyword_extractor.extract_keywords(
                 text=text,
                 method=keyword_method,
                 top_n=num_keywords
             )
         
-        # Clean up uploaded file
-        os.remove(filepath)
+        # Extract entities if requested
+        entities_data = None
+        if extract_entities:
+            entities_data = ner_extractor.extract_entities(text)
+        
+        # Clean up uploaded files
+        for filepath in filepaths:
+            os.remove(filepath)
         
         # Render results
         return render_template(
@@ -108,21 +179,31 @@ def summarize():
             word_count_original=summary_data['word_count_original'],
             original_length=summary_data['original_text_length'],
             summary_length=summary_data['summary_length'],
-            file_format=file_format,
-            filename=filename,
-            keywords_data=keywords_data
+            file_format=documents[0]['format'] if len(documents) == 1 else 'MULTIPLE',
+            filename=documents[0]['filename'] if len(documents) == 1 else f"{len(documents)} documents",
+            keywords_data=keywords_data,
+            entities_data=entities_data,
+            language=language,
+            language_name=multilingual.LANGUAGE_NAMES.get(language, 'English'),
+            is_multi_doc=is_multi_doc,
+            doc_stats=doc_stats,
+            documents=documents if is_multi_doc else None,
+            length_mode=length_mode,
+            summary_percentage=summary_percentage if length_mode == 'percentage' else None
         )
     
     except ValueError as e:
         flash(f'Error parsing file: {str(e)}', 'error')
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        for filepath in filepaths:
+            if os.path.exists(filepath):
+                os.remove(filepath)
         return redirect(url_for('index'))
     
     except Exception as e:
-        flash(f'Error processing file: {str(e)}', 'error')
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        flash(f'Error processing files: {str(e)}', 'error')
+        for filepath in filepaths:
+            if os.path.exists(filepath):
+                os.remove(filepath)
         return redirect(url_for('index'))
 
 @app.route('/about')
