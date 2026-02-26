@@ -1,6 +1,6 @@
-# Document Summarizer – NLP Internship Project
+# Document Summarizer – NLP Project
 
-A full-stack **document summarization web app** built with Flask and modern NLP. It supports extractive methods, a custom fine-tuned **BART abstractive summarizer**, multi-document upload, keyword extraction, and named-entity highlighting.
+A full stack **document summarization web app** built with Flask and modern NLP. It supports extractive methods, a custom fine-tuned **BART abstractive summarizer**, multi-document upload, keyword extraction, and named-entity highlighting.
 
 ## 🔍 Features
 
