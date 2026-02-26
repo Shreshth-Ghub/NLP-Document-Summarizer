@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Flask uploads and temp files
+uploads/
+*.log
+
+# Large models and checkpoints
+bart-summarizer-final/
+models/**/checkpoint-*/
+models/**/checkpoint_*/
+*.safetensors
+*.bin
+
+# Data files
+*.csv
+*.tsv
+*.xlsx
+*.pdf
+
+# Colab / notebook artifacts (if any)
+*.ipynb_checkpoints/

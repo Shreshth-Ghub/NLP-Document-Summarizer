@@ -1,279 +1,264 @@
-# Document Summarizer - NLP Internship Project
+# Document Summarizer – NLP Internship Project
 
-An extractive text summarization system built from scratch using NLP techniques (NLTK, TF-IDF) without external APIs. This project allows users to upload documents and generate concise summaries using two different scoring algorithms.
+A full-stack **document summarization web app** built with Flask and modern NLP. It supports extractive methods, a custom fine-tuned **BART abstractive summarizer**, multi-document upload, keyword extraction, and named-entity highlighting.
 
-## 🎯 Project Overview
+## 🔍 Features
 
-This document summarizer implements **extractive summarization** - selecting the most important sentences from the original document rather than generating new text. It uses custom-built algorithms to score and rank sentences, making it a true "train your own model" NLP project.
+- **Multiple summarization methods**
+  - Frequency-based extractive
+  - TextRank extractive
+  - Custom **BART** abstractive model (fine-tuned on news-style data)
+- **Smart upload flow**
+  - Upload one or many files at once
+  - Supported formats: `.txt`, `.pdf`, `.docx`
+  - Multi-document stats (total words, sentences, avg words per doc)
+- **Rich analysis view**
+  - Generated summary with compression stats
+  - Keyword cloud with scores
+  - Named entities grouped by People / Organizations / Locations
+  - Clean, responsive UI with print-friendly layout
 
-## 📊 Features
+## 🧱 Architecture
 
-- **Two Summarization Algorithms**:
-  1. **Word Frequency Method**: Scores sentences based on normalized word frequency
-  2. **TF-IDF Scoring**: Uses statistical term frequency-inverse document frequency analysis
+High-level pipeline:
 
-- **Web Interface**: 
-  - Clean, modern UI built with Flask
-  - Drag-and-drop file upload
-  - Adjustable summary length (1-20 sentences)
-  - Real-time method selection
-
-- **Detailed Analytics**:
-  - Compression ratio
-  - Word count statistics
-  - Sentence-by-sentence breakdown
-  - Original document comparison
-
-## 🛠️ Technical Architecture
-
-### NLP Pipeline
-
-```
-Input Document
+```text
+Upload documents
     ↓
-Text Preprocessing (NLTK)
-    ├─ Sentence tokenization
-    ├─ Word tokenization
-    ├─ Stopword removal
-    └─ Text cleaning
+Parsing (.txt / .pdf / .docx)
     ↓
-Sentence Scoring
-    ├─ Method 1: Word Frequency
-    │   └─ Normalized frequency counting
-    ├─ Method 2: TF-IDF
-    │   └─ sklearn TfidfVectorizer
+Preprocessing (cleaning, tokenization, stopwords)
     ↓
-Sentence Ranking & Selection
-    └─ Top N sentences by score
+Summarization
+    - frequency / textrank (extractive)
+    - BART (abstractive, Hugging Face Transformers)
     ↓
-Summary Generation
-    └─ Ordered by original position
+Post-processing
+    - keyword extraction
+    - NER
+    ↓
+Flask UI rendering (summary + stats + entities)
 ```
 
-### Project Structure
+Key modules:
 
+```text
+app.py                  # Flask app + routing
+preprocess.py           # TextPreprocessor
+model.py                # Extractive + ML summarizers
+summarize_bart.py       # Wrapper around fine-tuned BART model
+document_parser.py      # TXT / PDF / DOCX parsing
+textrank.py             # TextRank summarizer
+keywords.py             # KeywordExtractor
+ner.py                  # Named Entity Recognition
+templates/index.html    # Upload & options UI
+templates/result.html   # Summary + analysis view
+bart-summarizer-final/  # (local fine-tuned BART weights, not checked in)
 ```
-doc-summarizer/
-├── app.py                      # Flask web application
-├── preprocess.py               # Text preprocessing module
-├── model.py                    # Summarization algorithms
-├── templates/
-│   ├── index.html             # Upload interface
-│   └── result.html            # Summary display
-├── uploads/                    # Temporary file storage
-├── requirements.txt            # Python dependencies
-└── README.md                   # This file
-```
 
-## 📦 Installation
+## 🚀 Getting Started
 
-### Prerequisites
+### Requirements
 
-- Python 3.8+
-- pip package manager
+- Python 3.9+  
+- `pip`  
 
 ### Setup
 
-1. **Clone/Download the project**
+1. **Clone the repository**
+
 ```bash
+git clone <your-repo-url>
 cd doc-summarizer
 ```
 
-2. **Install dependencies**
+2. **Create and activate virtual environment (recommended)**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
+```
+
+3. **Install dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **Download NLTK data** (first run only)
-```python
+4. **Download NLTK data (first run only)**
+
+```bash
 python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
 ```
 
-4. **Run the application**
+5. **Add your BART model (optional)**
+
+If you have a fine-tuned BART model, place it in the project root as:
+
+```text
+bart-summarizer-final/
+    config.json
+    model.safetensors (or pytorch_model.bin)
+    tokenizer.json
+    tokenizer_config.json
+```
+
+If you don't have a custom model, the abstractive method will use a pretrained BART model from Hugging Face.
+
+6. **Run the application**
+
 ```bash
 python app.py
 ```
 
-5. **Open in browser**
-```
+7. **Open in browser**
+
+```text
 http://localhost:5000
 ```
 
-## 💻 Usage
+## 💡 Usage
 
 ### Via Web Interface
 
-1. Navigate to `http://localhost:5000`
-2. Click "Choose File" and upload a `.txt` document
-3. Select:
-   - Number of sentences for summary (1-20)
-   - Summarization method (Word Frequency or TF-IDF)
-4. Click "Generate Summary"
-5. View results with statistics and comparisons
+1. Go to `http://localhost:5000`
+2. Upload one or more `.txt`, `.pdf`, or `.docx` files
+3. Choose:
+   - Summary method: **Frequency**, **TextRank**, or **Abstractive**
+   - Length (fixed sentences or percentage)
+4. Click **Summarize**
+5. View results:
+   - Generated summary
+   - Compression and sentence stats
+   - Keywords and NER tags
+   - Multi-document statistics (if multiple files uploaded)
 
-### Supported File Formats
-
-- **Currently**: `.txt` files (UTF-8 encoded)
-- **Coming Soon**: PDF, DOCX support
-
-### API Usage (Code)
+### Programmatic Usage
 
 ```python
 from preprocess import TextPreprocessor
 from model import ExtractiveSummarizer
+from summarize_bart import summarize as bart_summarize
 
 # Initialize
 preprocessor = TextPreprocessor()
 summarizer = ExtractiveSummarizer()
 
-# Your document text
-text = "Your long document text here..."
+text = "Your long document here..."
 
-# Generate summary
+# Extractive summarization
 summary_data = summarizer.summarize_text(
     text=text,
     num_sentences=5,
-    method='tfidf',  # or 'frequency'
+    method="frequency",  # or "tfidf"
     preprocessor=preprocessor
 )
+print(summary_data["summary"])
 
-# Access results
-print(summary_data['summary'])
-print(f"Compression: {summary_data['compression_ratio']:.2%}")
+# Abstractive summarization (BART)
+bart_summary = bart_summarize(text)
+print(bart_summary)
 ```
 
-## 🧮 How It Works
+## 🛠️ Tech Stack
 
-### Method 1: Word Frequency Scoring
+- **Flask** – Web framework
+- **NLTK** – Tokenization, stopwords
+- **spaCy** – Named Entity Recognition
+- **Hugging Face Transformers** – BART model for abstractive summarization
+- **scikit-learn** – TF-IDF vectorization
+- **PyPDF2 / python-docx** – Document parsing
 
-1. **Tokenize** document into words and sentences
-2. **Calculate** word frequencies (normalized)
-3. **Score** each sentence = sum of word frequencies / sentence length
-4. **Rank** sentences by score
-5. **Select** top N sentences
+## 📊 How It Works
 
-**Formula**:
+### Extractive Methods
+
+**Frequency-based:**
+1. Calculate word frequencies (normalized)
+2. Score each sentence = sum of word frequencies / sentence length
+3. Rank and select top N sentences
+
+**TextRank:**
+1. Build graph where sentences are nodes
+2. Connect sentences by similarity
+3. Run PageRank algorithm
+4. Select top-ranked sentences
+
+### Abstractive Method (BART)
+
+1. Fine-tuned BART model on news summarization dataset
+2. Takes full document as input
+3. Generates new summary text (not just extraction)
+4. Produces more human-like, concise summaries
+
+## 🎯 Project Structure
+
+```text
+doc-summarizer/
+├── app.py                      # Main Flask application
+├── preprocess.py               # Text preprocessing
+├── model.py                    # Extractive summarization algorithms
+├── summarize_bart.py           # BART abstractive summarizer
+├── document_parser.py          # File parsing (TXT/PDF/DOCX)
+├── textrank.py                 # TextRank algorithm
+├── keywords.py                 # Keyword extraction
+├── ner.py                      # Named Entity Recognition
+├── multilingual.py             # Language detection & support
+├── multi_document.py           # Multi-document processing
+├── templates/
+│   ├── index.html             # Upload interface
+│   └── result.html            # Results display
+├── uploads/                    # Temporary file storage (gitignored)
+├── bart-summarizer-final/     # Fine-tuned BART model (gitignored)
+├── requirements.txt            # Python dependencies
+├── .gitignore                  # Git ignore rules
+└── README.md                   # This file
 ```
-sentence_score = Σ(word_frequency) / num_words_in_sentence
-```
-
-### Method 2: TF-IDF Scoring
-
-1. **Create** TF-IDF matrix for all sentences
-   - TF (Term Frequency): How often word appears in sentence
-   - IDF (Inverse Document Frequency): Rarity of word across sentences
-2. **Score** each sentence = sum of TF-IDF values
-3. **Rank** sentences by score
-4. **Select** top N sentences
-
-**Advantages**:
-- Identifies sentences with unique, important terms
-- Better handles documents with repetitive content
-
-## 📈 Example Results
-
-**Original Document** (152 words, 8 sentences):
-> Artificial intelligence has revolutionized modern technology... [full text]
-
-**Generated Summary** (3 sentences, 56 words):
-> Artificial intelligence has revolutionized modern technology. Machine learning algorithms can now process vast amounts of data. These advancements are transforming industries worldwide.
-
-**Statistics**:
-- Compression Ratio: 37.5%
-- Original Sentences: 8
-- Summary Sentences: 3
-- Method: TF-IDF
-
-## 🔬 Algorithm Comparison
-
-| Aspect | Word Frequency | TF-IDF |
-|--------|---------------|--------|
-| **Speed** | Faster | Slightly slower |
-| **Accuracy** | Good for simple docs | Better for complex docs |
-| **Best For** | News articles, blogs | Technical docs, reports |
-| **Handles Repetition** | Moderate | Excellent |
-
-## 🚀 Future Enhancements
-
-### Phase 1 (Current)
-- [x] Basic extractive summarization
-- [x] Web interface
-- [x] TXT file support
-- [x] Two scoring methods
-
-### Phase 2 (Next)
-- [ ] PDF document support
-- [ ] DOCX file support
-- [ ] Multi-document summarization
-- [ ] Summary length by percentage
-
-### Phase 3 (Advanced)
-- [ ] TextRank algorithm (graph-based)
-- [ ] Named Entity Recognition (NER)
-- [ ] Keyword extraction
-- [ ] Multi-language support
-
-### Phase 4 (ML Integration)
-- [ ] Supervised learning on labeled summaries
-- [ ] BERT embeddings for sentence similarity
-- [ ] Abstractive summarization (seq2seq models)
-- [ ] Evaluation metrics (ROUGE scores)
 
 ## 🧪 Testing
 
-Test with sample documents:
+Test with a sample document:
 
 ```bash
-# Create test document
-echo "Artificial intelligence has revolutionized modern technology. Machine learning algorithms can now process vast amounts of data efficiently. Deep learning neural networks have achieved remarkable success in image recognition. Natural language processing enables computers to understand human language. These advancements are transforming industries worldwide. Healthcare, finance, and transportation are all benefiting from AI innovations. However, ethical considerations must guide AI development. Responsible AI practices ensure technology serves humanity positively." > sample.txt
+# Create test file
+cat > sample.txt << EOF
+Artificial intelligence has revolutionized modern technology. Machine learning 
+algorithms can now process vast amounts of data efficiently. Deep learning neural 
+networks have achieved remarkable success in image recognition. Natural language 
+processing enables computers to understand human language. These advancements are 
+transforming industries worldwide. Healthcare, finance, and transportation are all 
+benefiting from AI innovations. However, ethical considerations must guide AI 
+development. Responsible AI practices ensure technology serves humanity positively.
+EOF
 ```
 
-Then upload via web interface.
+Then upload via web interface and try different methods.
 
-## 📊 Technical Details
+## 🚀 Future Enhancements
 
-### Dependencies
-
-- **Flask 3.0+**: Web framework
-- **NLTK 3.8+**: Natural language processing
-- **scikit-learn 1.3+**: TF-IDF vectorization
-- **NumPy 1.24+**: Numerical operations
-
-### Preprocessing Steps
-
-1. **Text Cleaning**: Remove special characters, extra whitespace
-2. **Sentence Tokenization**: Split into sentences using NLTK's Punkt tokenizer
-3. **Word Tokenization**: Split sentences into words
-4. **Stopword Removal**: Remove common words (the, is, at, etc.)
-5. **Normalization**: Lowercase conversion
-
-### Performance
-
-- **Speed**: <1 second for documents up to 5000 words
-- **Memory**: ~50 MB RAM for typical documents
-- **Max File Size**: 16 MB (configurable)
-
-## 🤝 Contributing
-
-This is an internship assignment project. Suggestions welcome via issues.
+- [ ] Add API endpoint for programmatic access
+- [ ] Support for more file formats (HTML, Markdown)
+- [ ] Batch processing interface
+- [ ] Summary comparison tool
+- [ ] Export summaries as PDF
+- [ ] Deployment guide (Docker, cloud platforms)
 
 ## 📄 License
 
-Educational project
+Educational / internship project – use for learning and portfolio purposes.
 
+## 👤 Author
 
-## 👨‍💻 Author
-
-Shreshth Gupt 
+**Shreshth Gupt**  
 NLP Document Summarization Project
 
-## 📚 References
+## 🙏 Acknowledgments
 
-1. NLTK Documentation: https://www.nltk.org/
-2. TF-IDF Explanation: scikit-learn documentation
-3. Extractive Summarization: Research papers on sentence extraction
-4. Flask Web Framework: https://flask.palletsprojects.com/
+- NLTK documentation and community
+- Hugging Face for Transformers library
+- Flask documentation
+- Various NLP research papers on extractive and abstractive summarization
 
 ---
 
-**Built with 🧠 for NLP internship assignment**
+**Built with 🧠 for NLP internship**
