@@ -261,4 +261,4 @@ NLP Document Summarization Project
 
 ---
 
-**Built with 🧠 for NLP internship**
+**Built with 🧠 for my NLP project in my AI Internship**
